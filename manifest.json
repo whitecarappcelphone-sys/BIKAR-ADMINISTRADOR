@@ -12,7 +12,7 @@
   "theme_color": "#316D87",
   "lang": "es",
   "dir": "ltr",
-  "categories": ["business", "productivity", "utilities"],
+  "categories": ["business", "productivity", "utilities", "travel"],
   "prefer_related_applications": false,
   "icons": [
     {
@@ -38,18 +38,21 @@
     {
       "name": "Ver viajes",
       "short_name": "Viajes",
+      "description": "Historial de viajes y recaudo de BIKAR Transportes",
       "url": "./index.html",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Ver conductores",
       "short_name": "Conductores",
+      "description": "Conductores aliados y su disponibilidad",
       "url": "./index.html",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Ver documentos",
       "short_name": "Documentos",
+      "description": "Documentación de los conductores de BIKAR",
       "url": "./index.html",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
