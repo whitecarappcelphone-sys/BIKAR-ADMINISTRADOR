@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Supabase</title>
-    <!-- Tailwind CSS para diseño rápido y moderno -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SDK de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -26,44 +26,50 @@
 
         <!-- Pestañas de Navegación -->
         <div class="flex space-x-2 mb-6 overflow-x-auto pb-2">
-            <button onclick="cargarDatos('usuarios')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded transition">Usuarios</button>
-            <button onclick="cargarDatos('conductores')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Conductores</button>
-            <button onclick="cargarDatos('vehiculos')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Vehículos</button>
-            <button onclick="cargarDatos('viajes')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Viajes</button>
-            <button onclick="cargarDatos('documentos_conductor')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Documentos</button>
-            <button onclick="cargarDatos('comercios')" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Comercios</button>
+            <button onclick="cambiarTabla('usuarios')" id="btn-usuarios" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded transition">Usuarios</button>
+            <button onclick="cambiarTabla('conductores')" id="btn-conductores" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Conductores</button>
+            <button onclick="cambiarTabla('vehiculos')" id="btn-vehiculos" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Vehículos</button>
+            <button onclick="cambiarTabla('viajes')" id="btn-viajes" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Viajes</button>
+            <button onclick="cambiarTabla('documentos_conductor')" id="btn-documentos_conductor" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Documentos</button>
+            <button onclick="cambiarTabla('comercios')" id="btn-comercios" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition">Comercios</button>
+        </div>
+
+        <!-- Barra de Búsqueda y Filtros -->
+        <div class="mb-4 flex gap-4 items-center">
+            <input type="text" id="input-buscar" placeholder="Filtrar resultados en pantalla..." onkeyup="filtrarTabla()" 
+                class="w-full md:w-96 px-4 py-2 bg-[#121212] border border-gray-800 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500">
+            <span id="contador-registros" class="text-xs text-gray-400 whitespace-nowrap">0 registros</span>
         </div>
 
         <!-- Contenedor de la Tabla -->
         <div class="card rounded-xl shadow-lg overflow-hidden">
-            <div class="p-4 border-b border-gray-800 flex justify-between items-center">
+            <div class="p-4 border-b border-gray-800">
                 <h2 id="titulo-tabla" class="text-lg font-semibold text-white">Selecciona una sección</h2>
-                <span id="contador-registros" class="text-xs text-gray-400">0 registros</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse" id="tabla-datos">
-                    <!-- Los datos se inyectarán aquí dinámicamente -->
+                    <!-- Los datos se inyectarán aquí -->
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuración de Supabase con tus credenciales
         const SUPABASE_URL = 'https://idswjzbrpneordatkqan.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc3dqemJycG5lb3JkYXRrcWFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3OTM2MjMsImV4cCI6MjEwNDM2OTYyM30.GmPqlWn3_EZTy23Oziw_N4DuoKDVAhqr6YHnlKBB2Gw';
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let tablaActual = 'usuarios';
+        let datosOriginales = [];
 
-        // Verificar conexión al cargar
         async function probarConexion() {
             const badge = document.getElementById('status-conexion');
             try {
-                const { data, error } = await supabaseClient.from('usuarios').select('id').limit(1);
+                const { error } = await supabaseClient.from('usuarios').select('id').limit(1);
                 if (error) throw error;
                 badge.textContent = 'Conectado (Lectura)';
                 badge.className = 'text-xs px-3 py-1 rounded bg-green-900 text-green-200';
-                cargarDatos('usuarios'); // Cargar usuarios por defecto
+                cargarDatos('usuarios');
             } catch (err) {
                 badge.textContent = 'Error de conexión';
                 badge.className = 'text-xs px-3 py-1 rounded bg-red-900 text-red-200';
@@ -71,61 +77,81 @@
             }
         }
 
-        // Función genérica para consultar cualquier tabla sin modificar
+        function cambiarTabla(tabla) {
+            tablaActual = tabla;
+            // Actualizar estilos de los botones
+            document.querySelectorAll('.flex.space-x-2 button').forEach(btn => {
+                btn.className = "px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded transition";
+            });
+            document.getElementById(`btn-${tabla}`).className = "px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded transition";
+            document.getElementById('input-buscar').value = '';
+            cargarDatos(tabla);
+        }
+
         async function cargarDatos(tabla) {
             document.getElementById('titulo-tabla').textContent = `Tabla: ${tabla.toUpperCase()}`;
             const tablaHTML = document.getElementById('tabla-datos');
             tablaHTML.innerHTML = `<tr><td class="p-4 text-center text-gray-400">Cargando datos...</td></tr>`;
 
             try {
-                const { data, error, count } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from(tabla)
-                    .select('*', { count: 'exact' })
-                    .limit(50); // Traemos los últimos 50 registros por seguridad
+                    .select('*')
+                    .limit(100); // Últimos 100 registros
 
                 if (error) throw error;
 
-                document.getElementById('contador-registros').textContent = `${data.length} registros mostrados`;
-
-                if (data.length === 0) {
-                    tablaHTML.innerHTML = `<tr><td class="p-4 text-center text-gray-400">No hay registros en esta tabla.</td></tr>`;
-                    return;
-                }
-
-                // Generar columnas de la tabla dinámicamente
-                const columnas = Object.keys(data[0]);
-                
-                let htmlHeader = '<tr class="bg-gray-900 border-b border-gray-800 text-xs text-gray-400 uppercase">';
-                columnas.forEach(col => {
-                    htmlHeader += `<th class="p-3">${col}</th>`;
-                });
-                htmlHeader += '</tr>';
-
-                let htmlBody = '';
-                data.forEach(row => {
-                    htmlBody += '<tr class="border-b border-gray-800/50 hover:bg-gray-900/40 text-sm">';
-                    columnas.forEach(col => {
-                        let valor = row[col];
-                        // Si es un enlace URL (como tus fotos o documentos), mostrar enlace amigable
-                        if (typeof valor === 'string' && (valor.startsWith('http://') || valor.startsWith('https://'))) {
-                            valor = `<a href="${valor}" target="_blank" class="text-blue-400 underline truncate max-w-xs block">Ver archivo</a>`;
-                        } else if (valor === null) {
-                            valor = '<span class="text-gray-600 italic">null</span>';
-                        }
-                        htmlBody += `<td class="p-3 truncate max-w-xs">${valor}</td>`;
-                    });
-                    htmlBody += '</tr>';
-                });
-
-    <main class="max-w-7xl mx-auto">
-        <!-- Contenido principal -->
-    </main>
-
-                tablaHTML.innerHTML = htmlHeader + htmlBody;
+                datosOriginales = data;
+                renderizarTabla(data);
 
             } catch (err) {
                 tablaHTML.innerHTML = `<tr><td class="p-4 text-center text-red-400">Error al consultar: ${err.message}</td></tr>`;
             }
+        }
+
+        function renderizarTabla(data) {
+            const tablaHTML = document.getElementById('tabla-datos');
+            document.getElementById('contador-registros').textContent = `${data.length} registros`;
+
+            if (data.length === 0) {
+                tablaHTML.innerHTML = `<tr><td class="p-4 text-center text-gray-400">No hay registros en esta tabla.</td></tr>`;
+                return;
+            }
+
+            const columnas = Object.keys(data[0]);
+            
+            let htmlHeader = '<tr class="bg-gray-900 border-b border-gray-800 text-xs text-gray-400 uppercase">';
+            columnas.forEach(col => {
+                htmlHeader += `<th class="p-3">${col}</th>`;
+            });
+            htmlHeader += '</tr>';
+
+            let htmlBody = '';
+            data.forEach(row => {
+                htmlBody += '<tr class="border-b border-gray-800/50 hover:bg-gray-900/40 text-sm">';
+                columnas.forEach(col => {
+                    let valor = row[col];
+                    if (typeof valor === 'string' && (valor.startsWith('http://') || valor.startsWith('https://'))) {
+                        valor = `<a href="${valor}" target="_blank" class="text-blue-400 underline truncate max-w-xs block">Ver archivo</a>`;
+                    } else if (valor === null) {
+                        valor = '<span class="text-gray-600 italic">null</span>';
+                    }
+                    htmlBody += `<td class="p-3 truncate max-w-xs">${valor}</td>`;
+                });
+                htmlBody += '</tr>';
+            });
+
+            tablaHTML.innerHTML = htmlHeader + htmlBody;
+        }
+
+        function filtrarTabla() {
+            const texto = document.getElementById('input-buscar').value.toLowerCase();
+            const filtrados = datosOriginales.filter(row => {
+                return Object.values(row).some(val => 
+                    String(val).toLowerCase().includes(texto)
+                );
+            });
+            renderizarTabla(filtrados);
         }
 
         probarConexion();
